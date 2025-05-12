@@ -1,7 +1,7 @@
+import { supabase } from '@shared/supabase';
 import cors from 'cors';
 import express, { NextFunction, type Request, Response } from "express";
 import { createServer } from 'http';
-import { supabase } from '../shared/supabase';
 import { setupAuth } from "./auth";
 import { config } from './config';
 import { runMigrations } from './migrations';

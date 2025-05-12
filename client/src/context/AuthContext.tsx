@@ -1,6 +1,6 @@
+import { supabase } from "@shared/supabase";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { supabase } from "../../shared/supabase";
 
 interface User {
   id: string; // Alterado para string para compatibilidade com o UUID do Supabase

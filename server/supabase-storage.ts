@@ -11,7 +11,7 @@ import {
     type Product,
     type User
 } from "@shared/schema";
-import { supabase } from "../shared/supabase";
+import { supabase } from "@shared/supabase";
 import { IStorage } from "./storage";
 
 // Implementação usando Supabase
