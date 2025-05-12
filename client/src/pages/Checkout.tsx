@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiUrl } from '@/config';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/formatCurrency';
@@ -114,7 +115,7 @@ export default function Checkout() {
     if (!orderId) return;
 
     try {
-      const response = await fetch(`/api/payments`, {
+      const response = await fetch(apiUrl('/api/payments'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -162,7 +163,7 @@ export default function Checkout() {
         subtotal: item.price * item.quantity
       }));
 
-      const response = await fetch('/api/orders', {
+      const response = await fetch(apiUrl('/api/orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

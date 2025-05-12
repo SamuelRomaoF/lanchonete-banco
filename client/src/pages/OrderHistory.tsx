@@ -1,26 +1,27 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/context/AuthContext";
-import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiUrl } from '@/config';
+import { useAuth } from "@/context/AuthContext";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { Order, OrderItem, Product } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 type OrderWithItems = {
   order: Order;
@@ -81,7 +82,7 @@ const OrderHistory = () => {
   
   // Função para buscar detalhes do pedido
   const fetchOrderDetails = async (orderId: number) => {
-    const response = await fetch(`/api/orders/${orderId}`, {
+    const response = await fetch(apiUrl(`/api/orders/${orderId}`), {
       credentials: "include",
     });
     
