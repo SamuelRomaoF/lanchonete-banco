@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import ProductCard from "@/components/ProductCard";
 import CategoryCard from "@/components/CategoryCard";
+import ProductCard from "@/components/ProductCard";
+import { Button } from "@/components/ui/button";
+import { Offer, offerService } from "@/lib/services/offerService";
+import { supabaseService } from "@/lib/services/supabaseService";
 import { Category, Product } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
 const Home = () => {
   // Buscar categorias
@@ -13,7 +14,8 @@ const Home = () => {
     isLoading: categoriesLoading,
     error: categoriesError,
   } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
+    queryKey: ['categories'],
+    queryFn: () => supabaseService.getCategories()
   });
 
   // Buscar produtos em destaque
@@ -22,7 +24,8 @@ const Home = () => {
     isLoading: productsLoading,
     error: productsError,
   } = useQuery<Product[]>({
-    queryKey: ['/api/products/featured'],
+    queryKey: ['featuredProducts'],
+    queryFn: () => supabaseService.getFeaturedProducts()
   });
 
   // Buscar produtos em promoção
@@ -31,7 +34,18 @@ const Home = () => {
     isLoading: promotionsLoading,
     error: promotionsError,
   } = useQuery<Product[]>({
-    queryKey: ['/api/products/promotions'],
+    queryKey: ['promotionProducts'],
+    queryFn: () => supabaseService.getPromotionProducts()
+  });
+
+  // Buscar ofertas especiais
+  const {
+    data: offers,
+    isLoading: offersLoading,
+    error: offersError,
+  } = useQuery<Offer[]>({
+    queryKey: ['offers'],
+    queryFn: () => offerService.getActiveOffers()
   });
 
   if (categoriesError || productsError || promotionsError) {
@@ -162,31 +176,48 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold mb-8 text-center">Ofertas Especiais</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl overflow-hidden shadow-lg">
-              <div className="p-6 md:p-8">
-                <h3 className="text-xl md:text-2xl font-bold mb-2">Terça de Pizza</h3>
-                <p className="mb-4 opacity-90">Toda terça-feira, compre uma pizza grande e ganhe uma pequena grátis!</p>
-                <Link href="/produtos">
-                  <Button variant="secondary" className="bg-white hover:bg-neutral-lightest text-primary font-medium py-2 px-4 rounded-lg">
-                    Pedir Agora
-                  </Button>
-                </Link>
-              </div>
+          {offersLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-gray-200 rounded-xl overflow-hidden shadow-lg animate-pulse h-40">
+                </div>
+              ))}
             </div>
-            
-            <div className="bg-gradient-to-r from-secondary to-secondary-dark text-white rounded-xl overflow-hidden shadow-lg">
-              <div className="p-6 md:p-8">
-                <h3 className="text-xl md:text-2xl font-bold mb-2">Combo Estudante</h3>
-                <p className="mb-4 opacity-90">Hambúrguer, batata e refrigerante por apenas R$ 25,90 com carteirinha!</p>
-                <Link href="/produtos">
-                  <Button variant="secondary" className="bg-white hover:bg-neutral-lightest text-secondary font-medium py-2 px-4 rounded-lg">
-                    Pedir Agora
-                  </Button>
-                </Link>
-              </div>
+          ) : offers && offers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {offers.map((offer) => (
+                <div 
+                  key={offer.id} 
+                  className={`bg-gradient-to-r ${
+                    offer.type === 'primary' 
+                      ? 'from-primary to-primary-dark' 
+                      : 'from-secondary to-secondary-dark'
+                  } text-white rounded-xl overflow-hidden shadow-lg`}
+                >
+                  <div className="p-6 md:p-8">
+                    <h3 className="text-xl md:text-2xl font-bold mb-2">{offer.title}</h3>
+                    <p className="mb-4 opacity-90">{offer.description}</p>
+                    <Link href={offer.url}>
+                      <Button 
+                        variant="secondary" 
+                        className={`bg-white hover:bg-neutral-lightest ${
+                          offer.type === 'primary' 
+                            ? 'text-primary' 
+                            : 'text-secondary'
+                        } font-medium py-2 px-4 rounded-lg`}
+                      >
+                        {offer.buttonText}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-center text-gray-500">
+              <p>Não há ofertas disponíveis no momento</p>
+            </div>
+          )}
         </div>
       </section>
 

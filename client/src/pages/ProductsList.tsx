@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import ProductCard from "@/components/ProductCard";
-import { Product, Category } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabaseService } from "@/lib/services/supabaseService";
+import { Category, Product } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useParams } from "wouter";
 
 const ProductsList = () => {
   const { categoria } = useParams();
@@ -16,7 +17,8 @@ const ProductsList = () => {
     data: categories,
     isLoading: categoriesLoading,
   } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
+    queryKey: ['categories'],
+    queryFn: () => supabaseService.getCategories()
   });
   
   // Buscar produtos (todos ou por categoria)
@@ -24,9 +26,10 @@ const ProductsList = () => {
     data: products,
     isLoading: productsLoading,
   } = useQuery<Product[]>({
-    queryKey: categoria 
-      ? ['/api/products', { categoryId: parseInt(categoria) }] 
-      : ['/api/products'],
+    queryKey: ['products', categoria],
+    queryFn: () => categoria 
+      ? supabaseService.getProductsByCategory(parseInt(categoria)) 
+      : supabaseService.getProducts()
   });
   
   // Filtrar produtos por busca

@@ -1,9 +1,22 @@
+import { insertCategorySchema, insertOrderItemSchema, insertOrderSchema, insertPaymentSchema, insertProductSchema, insertUserSchema } from "@shared/schema";
+import * as bcrypt from 'bcrypt';
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import * as bcrypt from 'bcrypt';
-import { insertUserSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertPaymentSchema, insertCategorySchema } from "@shared/schema";
 import { z } from "zod";
+import { config } from './config';
+import { IStorage, MemStorage } from "./storage";
+import { SupabaseStorage } from './supabase-storage';
+
+// Inicializar o armazenamento correto de acordo com a configuração
+let storageInstance: IStorage;
+
+if (config.storage.type === 'supabase') {
+  storageInstance = new SupabaseStorage();
+  console.log('Usando armazenamento Supabase');
+} else {
+  storageInstance = new MemStorage();
+  console.log('Usando armazenamento em memória');
+}
 
 // Função para lidar com erros do Zod
 function handleZodError(error: z.ZodError) {
@@ -44,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email e senha são obrigatórios" });
       }
       
-      const user = await storage.getUserByEmail(email);
+      const user = await storageInstance.getUserByEmail(email);
       
       if (!user) {
         return res.status(401).json({ message: "Credenciais inválidas" });
@@ -89,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password, ...userData } = result.data;
       
       // Verificar se email já existe
-      const existingUser = await storage.getUserByEmail(email);
+      const existingUser = await storageInstance.getUserByEmail(email);
       
       if (existingUser) {
         return res.status(400).json({ message: "Email já cadastrado" });
@@ -99,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(password, 10);
       
       // Criar novo usuário
-      const newUser = await storage.createUser({
+      const newUser = await storageInstance.createUser({
         ...userData,
         email,
         password: hashedPassword,
@@ -142,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==== Rotas de categorias ====
   app.get('/api/categories', async (req, res) => {
     try {
-      const categories = await storage.getCategories();
+      const categories = await storageInstance.getCategories();
       return res.status(200).json(categories);
     } catch (error) {
       console.error('Erro ao buscar categorias:', error);
@@ -158,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const category = await storage.getCategory(id);
+      const category = await storageInstance.getCategory(id);
       
       if (!category) {
         return res.status(404).json({ message: "Categoria não encontrada" });
@@ -179,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(handleZodError(result.error));
       }
       
-      const newCategory = await storage.createCategory(result.data);
+      const newCategory = await storageInstance.createCategory(result.data);
       
       return res.status(201).json({
         message: "Categoria criada com sucesso",
@@ -205,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(handleZodError(result.error));
       }
       
-      const updatedCategory = await storage.updateCategory(id, result.data);
+      const updatedCategory = await storageInstance.updateCategory(id, result.data);
       
       if (!updatedCategory) {
         return res.status(404).json({ message: "Categoria não encontrada" });
@@ -229,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const success = await storage.deleteCategory(id);
+      const success = await storageInstance.deleteCategory(id);
       
       if (!success) {
         return res.status(404).json({ message: "Categoria não encontrada" });
@@ -252,9 +265,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let products;
       
       if (categoryId && !isNaN(categoryId)) {
-        products = await storage.getProductsByCategory(categoryId);
+        products = await storageInstance.getProductsByCategory(categoryId);
       } else {
-        products = await storage.getProducts();
+        products = await storageInstance.getProducts();
       }
       
       return res.status(200).json(products);
@@ -266,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/products/featured', async (req, res) => {
     try {
-      const products = await storage.getFeaturedProducts();
+      const products = await storageInstance.getFeaturedProducts();
       return res.status(200).json(products);
     } catch (error) {
       console.error('Erro ao buscar produtos em destaque:', error);
@@ -276,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/products/promotions', async (req, res) => {
     try {
-      const products = await storage.getPromotionProducts();
+      const products = await storageInstance.getPromotionProducts();
       return res.status(200).json(products);
     } catch (error) {
       console.error('Erro ao buscar produtos em promoção:', error);
@@ -292,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const product = await storage.getProduct(id);
+      const product = await storageInstance.getProduct(id);
       
       if (!product) {
         return res.status(404).json({ message: "Produto não encontrado" });
@@ -313,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(handleZodError(result.error));
       }
       
-      const newProduct = await storage.createProduct(result.data);
+      const newProduct = await storageInstance.createProduct(result.data);
       
       return res.status(201).json({
         message: "Produto criado com sucesso",
@@ -339,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json(handleZodError(result.error));
       }
       
-      const updatedProduct = await storage.updateProduct(id, result.data);
+      const updatedProduct = await storageInstance.updateProduct(id, result.data);
       
       if (!updatedProduct) {
         return res.status(404).json({ message: "Produto não encontrado" });
@@ -363,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const success = await storage.deleteProduct(id);
+      const success = await storageInstance.deleteProduct(id);
       
       if (!success) {
         return res.status(404).json({ message: "Produto não encontrado" });
@@ -381,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==== Rotas de pedidos ====
   app.get('/api/orders', adminMiddleware, async (req, res) => {
     try {
-      const orders = await storage.getOrders();
+      const orders = await storageInstance.getOrders();
       return res.status(200).json(orders);
     } catch (error) {
       console.error('Erro ao buscar pedidos:', error);
@@ -403,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Não autorizado a ver pedidos de outro usuário" });
       }
       
-      const orders = await storage.getOrdersByUser(userId);
+      const orders = await storageInstance.getOrdersByUser(userId);
       return res.status(200).json(orders);
     } catch (error) {
       console.error('Erro ao buscar pedidos do usuário:', error);
@@ -420,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const orderDetails = await storage.getOrderWithItems(id);
+      const orderDetails = await storageInstance.getOrderWithItems(id);
       
       if (!orderDetails) {
         return res.status(404).json({ message: "Pedido não encontrado" });
@@ -466,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
         
-        const product = await storage.getProduct(item.productId);
+        const product = await storageInstance.getProduct(item.productId);
         
         if (!product) {
           hasError = true;
@@ -488,7 +501,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Criar pedido
-      const newOrder = await storage.createOrder(orderResult.data, validItems);
+      const newOrder = await storageInstance.createOrder(orderResult.data, validItems);
+      
+      // Obter detalhes completos do pedido com os produtos
+      const orderDetails = await storageInstance.getOrderWithItems(newOrder.id);
+      
+      // Notificar via websocket
+      if (orderDetails) {
+        notifyNewOrder(orderDetails);
+      }
       
       return res.status(201).json({
         message: "Pedido criado com sucesso",
@@ -513,11 +534,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status inválido" });
       }
       
-      const updatedOrder = await storage.updateOrderStatus(id, status);
+      const updatedOrder = await storageInstance.updateOrderStatus(id, status);
       
       if (!updatedOrder) {
         return res.status(404).json({ message: "Pedido não encontrado" });
       }
+      
+      // Notificar via websocket
+      notifyOrderStatusUpdated(updatedOrder);
       
       return res.status(200).json({
         message: "Status do pedido atualizado com sucesso",
@@ -541,24 +565,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { orderId } = result.data;
       
       // Verificar se o pedido existe
-      const order = await storage.getOrder(orderId);
+      const order = await storageInstance.getOrder(orderId);
       
       if (!order) {
         return res.status(404).json({ message: "Pedido não encontrado" });
       }
       
       // Verificar se já existe pagamento para este pedido
-      const existingPayment = await storage.getPaymentByOrder(orderId);
+      const existingPayment = await storageInstance.getPaymentByOrder(orderId);
       
       if (existingPayment) {
         return res.status(400).json({ message: "Já existe um pagamento para este pedido" });
       }
       
       // Criar pagamento
-      const newPayment = await storage.createPayment(result.data);
+      const newPayment = await storageInstance.createPayment(result.data);
       
       // Atualizar status do pedido para confirmado
-      await storage.updateOrderStatus(orderId, 'confirmado');
+      await storageInstance.updateOrderStatus(orderId, 'confirmado');
       
       return res.status(201).json({
         message: "Pagamento registrado com sucesso",
@@ -578,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID inválido" });
       }
       
-      const payment = await storage.getPayment(id);
+      const payment = await storageInstance.getPayment(id);
       
       if (!payment) {
         return res.status(404).json({ message: "Pagamento não encontrado" });
@@ -599,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID de pedido inválido" });
       }
       
-      const payment = await storage.getPaymentByOrder(orderId);
+      const payment = await storageInstance.getPaymentByOrder(orderId);
       
       if (!payment) {
         return res.status(404).json({ message: "Pagamento não encontrado para este pedido" });
@@ -625,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status inválido" });
       }
       
-      const updatedPayment = await storage.updatePaymentStatus(id, status);
+      const updatedPayment = await storageInstance.updatePaymentStatus(id, status);
       
       if (!updatedPayment) {
         return res.status(404).json({ message: "Pagamento não encontrado" });
@@ -633,12 +657,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Se o pagamento for aprovado, atualizar status do pedido para em preparo
       if (status === 'aprovado') {
-        await storage.updateOrderStatus(updatedPayment.orderId, 'preparo');
+        await storageInstance.updateOrderStatus(updatedPayment.orderId, 'preparo');
       }
       
       // Se o pagamento for recusado, atualizar status do pedido para cancelado
       if (status === 'recusado') {
-        await storage.updateOrderStatus(updatedPayment.orderId, 'cancelado');
+        await storageInstance.updateOrderStatus(updatedPayment.orderId, 'cancelado');
       }
       
       return res.status(200).json({
@@ -654,7 +678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==== Rota de dashboard para admin ====
   app.get('/api/admin/dashboard', adminMiddleware, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const stats = await storageInstance.getDashboardStats();
       return res.status(200).json(stats);
     } catch (error) {
       console.error('Erro ao buscar estatísticas do dashboard:', error);

@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { supabase } from "../../shared/supabase";
 
 interface User {
-  id: number;
+  id: string; // Alterado para string para compatibilidade com o UUID do Supabase
   name: string;
   email: string;
   type: 'cliente' | 'admin';
@@ -39,18 +40,69 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
+  useEffect(() => {
+    // Configurar listener para mudanças de autenticação
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Verificar se já existe uma sessão ativa
+    checkAuth();
+
+    return () => {
+      // Remover listener ao desmontar
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Função auxiliar para buscar o perfil completo do usuário
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+      
+      if (error) {
+        console.error("Erro ao buscar perfil do usuário:", error);
+        return;
+      }
+      
+      if (data) {
+        setUser({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          type: data.type
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar perfil do usuário:", error);
+    }
+  };
+  
   const checkAuth = async () => {
     try {
-      const response = await fetch("/api/auth/me", {
-        credentials: "include",
-      });
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Dados do usuário recuperados:", data);
-        setUser(data.user);
+      if (error) {
+        console.error("Erro ao verificar sessão:", error);
+        setLoading(false);
+        return;
+      }
+      
+      if (session?.user) {
+        await fetchUserProfile(session.user);
       } else {
-        console.log("Usuário não autenticado");
+        setUser(null);
       }
     } catch (error) {
       console.error("Erro ao verificar autenticação:", error);
@@ -59,31 +111,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
   
-  useEffect(() => {
-    checkAuth();
-  }, []);
-  
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Erro no login:", errorData);
-        throw new Error(errorData.message || "Erro ao fazer login");
+      if (error) {
+        throw new Error(error.message);
       }
       
-      const data = await response.json();
-      console.log("Login bem-sucedido:", data);
-      setUser(data.user);
-      return data.user;
+      if (data.user) {
+        await fetchUserProfile(data.user);
+      }
     } catch (error) {
       console.error("Erro durante o login:", error);
       throw error;
@@ -91,14 +132,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
   
   const register = async (data: RegisterData) => {
-    const response = await apiRequest("POST", "/api/auth/register", data);
-    const resultData = await response.json();
-    await login(data.email, data.password);
+    try {
+      // 1. Registrar usuário com autenticação do Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+      });
+      
+      if (authError) {
+        throw new Error(authError.message);
+      }
+      
+      if (!authData.user) {
+        throw new Error("Falha ao criar usuário");
+      }
+      
+      // 2. Criar perfil do usuário na tabela users
+      const { error: profileError } = await supabase
+        .from('users')
+        .upsert({
+          id: authData.user.id,
+          name: data.name,
+          email: data.email,
+          password: '', // Não armazenamos a senha diretamente, o Supabase Auth já cuida disso
+          phone: data.phone || null,
+          address: data.address || null,
+          type: 'cliente' // Tipo padrão para novos usuários
+        });
+      
+      if (profileError) {
+        // Se falhar em criar o perfil, tentar excluir o usuário auth (opcional)
+        console.error("Erro ao criar perfil de usuário:", profileError);
+        throw new Error("Erro ao criar perfil de usuário: " + profileError.message);
+      }
+      
+      // 3. Já estamos logados após o signUp, então apenas atualizamos o estado
+      await fetchUserProfile(authData.user);
+    } catch (error) {
+      console.error("Erro durante o registro:", error);
+      throw error;
+    }
   };
   
   const logout = async () => {
-    await apiRequest("POST", "/api/auth/logout", {});
-    setUser(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Erro ao fazer logout:", error);
+      }
+      
+      setUser(null);
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
   };
   
   const value = {
