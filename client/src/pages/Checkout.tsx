@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useEffect, useState } from 'react';
 import { io } from "socket.io-client";
-import { useLocation, useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 
 const PAYMENT_STATUS = {
   PENDING: 'pendente',
@@ -37,8 +37,12 @@ interface CheckoutStep {
 export default function Checkout() {
   const { cart, clearCart, totalAmount } = useCart();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [, setLocation] = useLocation();
+  
+  // Função de navegação usando setLocation
+  const navigateTo = (path: string) => {
+    setLocation(path);
+  };
   
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -94,9 +98,9 @@ export default function Checkout() {
   // Verificar se o carrinho está vazio
   useEffect(() => {
     if (cart.length === 0 && !orderId) {
-      navigate('/');
+      navigateTo('/');
     }
-  }, [cart, navigate, orderId]);
+  }, [cart, orderId]);
 
   // Salvar pedido no localStorage quando confirmado
   useEffect(() => {
@@ -234,7 +238,7 @@ export default function Checkout() {
       </div>
 
       <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={() => navigate('/')}>
+        <Button variant="outline" onClick={() => navigateTo('/')}>
           Voltar
         </Button>
         <Button 
@@ -394,7 +398,7 @@ export default function Checkout() {
         </div>
       </div>
       
-      <Button onClick={() => navigate('/pedidos')}>
+      <Button onClick={() => navigateTo('/pedidos')}>
         Ver Meus Pedidos
       </Button>
     </div>

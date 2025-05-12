@@ -1,3 +1,5 @@
+export * from './formatCurrency';
+
 /**
  * Formata um valor numérico para o formato de moeda em reais (R$)
  * @param value O valor a ser formatado
