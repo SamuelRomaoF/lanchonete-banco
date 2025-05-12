@@ -5,14 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiUrl } from '@/config';
+import { apiUrl, IS_MOCK_MODE } from '@/config';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import mockIO from '@/lib/mockSocket';
 import { formatCurrency } from '@/lib/utils/formatCurrency';
 import { AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useEffect, useState } from 'react';
-import { io } from "socket.io-client";
 import { useLocation } from 'wouter';
+
+// Importação condicional do socket.io-client
+// Em produção usamos o mock, em desenvolvimento usamos o real
+const io = IS_MOCK_MODE ? mockIO : require('socket.io-client').io;
 
 const PAYMENT_STATUS = {
   PENDING: 'pendente',
