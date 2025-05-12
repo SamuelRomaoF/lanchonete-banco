@@ -63,7 +63,14 @@ export default function Checkout() {
   useEffect(() => {
     if (orderStatus === ORDER_STATUS.CONFIRMED || !orderId || !user) return;
     
-    const socket = io(window.location.origin);
+    // Determinar o URL do servidor de WebSockets
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    const host = window.location.host;
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? `${protocol}//${host}` 
+      : window.location.origin;
+    
+    const socket = io(socketUrl);
 
     socket.on('connect', () => {
       socket.emit('customer:subscribe', user.id);
