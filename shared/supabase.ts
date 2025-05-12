@@ -77,14 +77,37 @@ if (IS_MOCK_MODE) {
       })
     },
     from: (table) => ({
-      select: () => ({
-        eq: () => ({
-          data: [],
-          error: null
-        }),
-        data: [],
-        error: null
-      }),
+      select: () => {
+        // Criar um objeto base para a query
+        const baseQuery = {
+          data: getMockData(table),
+          error: null,
+          
+          // Método eq para filtrar
+          eq: (column, value) => {
+            const filteredData = baseQuery.data.filter(item => item[column] === value);
+            
+            return {
+              ...baseQuery,
+              data: filteredData,
+              
+              // Adicionar o método single
+              single: () => ({
+                data: filteredData.length > 0 ? filteredData[0] : null,
+                error: null
+              })
+            };
+          },
+          
+          // Adicionar método single diretamente
+          single: () => ({
+            data: baseQuery.data.length > 0 ? baseQuery.data[0] : null,
+            error: null
+          })
+        };
+        
+        return baseQuery;
+      },
       insert: (data) => ({
         data,
         error: null
@@ -115,6 +138,67 @@ if (IS_MOCK_MODE) {
 
   // Criação do cliente Supabase
   supabaseClient = createClient(supabaseUrl, supabaseKey);
+}
+
+// Função para obter dados de exemplo baseados na tabela
+function getMockData(table) {
+  switch (table) {
+    case 'profiles':
+      return [
+        {
+          id: 'mock-user-123',
+          name: 'Usuário Teste',
+          email: 'usuario@exemplo.com',
+          type: 'customer',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-admin-456',
+          name: 'Admin Teste',
+          email: 'admin@exemplo.com',
+          type: 'admin',
+          created_at: new Date().toISOString()
+        }
+      ];
+    case 'categories':
+      return [
+        { id: 1, name: 'Hambúrgueres', imageUrl: 'https://via.placeholder.com/200' },
+        { id: 2, name: 'Bebidas', imageUrl: 'https://via.placeholder.com/200' },
+        { id: 3, name: 'Sobremesas', imageUrl: 'https://via.placeholder.com/200' }
+      ];
+    case 'products':
+      return [
+        { 
+          id: 1, 
+          name: 'X-Burger', 
+          price: 20.9, 
+          description: 'Delicioso hambúrguer com queijo', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 1,
+          featured: true 
+        },
+        { 
+          id: 2, 
+          name: 'Coca-Cola', 
+          price: 6.5, 
+          description: 'Refrigerante 350ml', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 2,
+          featured: false 
+        },
+        { 
+          id: 3, 
+          name: 'Sundae', 
+          price: 8.9, 
+          description: 'Sorvete com calda de chocolate', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 3,
+          featured: true 
+        }
+      ];
+    default:
+      return [];
+  }
 }
 
 // Exportação do cliente
