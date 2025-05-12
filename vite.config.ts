@@ -31,7 +31,7 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
-      external: ['socket.io-client', '@supabase/supabase-js']
+      external: ['socket.io-client']
     }
   },
 });
