@@ -10,6 +10,9 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_FLAGS = "--legacy-peer-deps"
+  # Supabase configuration (substitua pelos valores reais)
+  VITE_SUPABASE_URL = "https://icjdxrhzuplphrtjlnaw.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljamR4cmh6dXBscGhydGpsbmF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5NzcyNTcsImV4cCI6MjA2MjU1MzI1N30.lv7KaIoFMZQUA334qvcu09BEEOPOb-vVz6O_mJ8i1PI"
 
 [dev]
   command = "npm run dev"

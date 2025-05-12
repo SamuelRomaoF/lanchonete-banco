@@ -6,7 +6,7 @@
 export const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Controle de ambiente mock (sem back-end)
-export const IS_MOCK_MODE = process.env.NODE_ENV === 'production';
+export const IS_MOCK_MODE = false;
 
 // Função auxiliar para construir URLs da API
 export const apiUrl = (path: string): string => {
