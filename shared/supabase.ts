@@ -8,6 +8,12 @@ if (IS_MOCK_MODE) {
   // Em produção, usamos o mock que criamos
   console.log('Usando cliente Supabase mockado');
   
+  // Função para criar um objeto de resposta padrão
+  const mockResponse = <T>(data: T) => ({
+    data,
+    error: null
+  });
+  
   // Implementação mock simples para evitar erros
   supabaseClient = {
     auth: {
@@ -76,51 +82,68 @@ if (IS_MOCK_MODE) {
         data: { subscription: { unsubscribe: () => {} } }
       })
     },
-    from: (table) => ({
-      select: () => {
-        // Criar um objeto base para a query
-        const baseQuery = {
-          data: getMockData(table),
-          error: null,
-          
-          // Método eq para filtrar
-          eq: (column, value) => {
-            const filteredData = baseQuery.data.filter(item => item[column] === value);
+    from: (table) => {
+      // Mock de perfil de usuário padrão para qualquer tabela
+      const mockProfile = {
+        id: "mock-user-123",
+        user_id: "mock-user-123",
+        name: "Usuário Teste",
+        email: "usuario@exemplo.com",
+        type: "customer",
+        created_at: new Date().toISOString()
+      };
+      
+      // Cria um objeto de consulta (query builder)
+      return {
+        select: () => {
+          const queryBuilder = {
+            data: getMockData(table),
             
-            return {
-              ...baseQuery,
-              data: filteredData,
+            // Método eq para filtro
+            eq: (column, value) => {
+              console.log(`[Mock Supabase] Filtro: ${table}.${column} = ${value}`);
               
-              // Adicionar o método single
-              single: () => ({
-                data: filteredData.length > 0 ? filteredData[0] : null,
-                error: null
-              })
-            };
-          },
+              // Para tabela de perfis, sempre retorna o perfil mockado
+              if (table === 'profiles') {
+                return {
+                  single: () => mockResponse(mockProfile),
+                  data: [mockProfile],
+                  error: null
+                };
+              }
+              
+              // Para outras tabelas, tenta filtrar
+              try {
+                const filteredData = queryBuilder.data.filter(item => 
+                  item && typeof item === 'object' && column in item && item[column] === value
+                );
+                
+                return {
+                  single: () => mockResponse(filteredData.length > 0 ? filteredData[0] : null),
+                  data: filteredData,
+                  error: null
+                };
+              } catch (error) {
+                console.error(`[Mock Supabase] Erro ao filtrar: ${error}`);
+                return {
+                  single: () => mockResponse(null),
+                  data: [],
+                  error: null
+                };
+              }
+            },
+            
+            // Método single para retornar um único item
+            single: () => mockResponse(queryBuilder.data.length > 0 ? queryBuilder.data[0] : null)
+          };
           
-          // Adicionar método single diretamente
-          single: () => ({
-            data: baseQuery.data.length > 0 ? baseQuery.data[0] : null,
-            error: null
-          })
-        };
-        
-        return baseQuery;
-      },
-      insert: (data) => ({
-        data,
-        error: null
-      }),
-      update: (data) => ({
-        data,
-        error: null
-      }),
-      delete: () => ({
-        data: null,
-        error: null
-      })
-    })
+          return queryBuilder;
+        },
+        insert: (data) => mockResponse(data),
+        update: (data) => mockResponse(data),
+        delete: () => mockResponse(null)
+      };
+    }
   };
 } else {
   // Em desenvolvimento, usamos o cliente real do Supabase
@@ -147,6 +170,7 @@ function getMockData(table) {
       return [
         {
           id: 'mock-user-123',
+          user_id: 'mock-user-123',
           name: 'Usuário Teste',
           email: 'usuario@exemplo.com',
           type: 'customer',
@@ -154,6 +178,7 @@ function getMockData(table) {
         },
         {
           id: 'mock-admin-456',
+          user_id: 'mock-admin-456',
           name: 'Admin Teste',
           email: 'admin@exemplo.com',
           type: 'admin',
