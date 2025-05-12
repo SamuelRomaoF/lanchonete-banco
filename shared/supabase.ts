@@ -92,6 +92,58 @@ if (IS_MOCK_MODE) {
         type: "customer",
         created_at: new Date().toISOString()
       };
+
+      // Lista de produtos em destaque
+      const featuredProducts = [
+        { 
+          id: 1, 
+          name: 'X-Burger', 
+          price: 20.9, 
+          description: 'Delicioso hambúrguer com queijo', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 1,
+          is_featured: true,
+          is_promotion: false
+        },
+        { 
+          id: 3, 
+          name: 'Sundae', 
+          price: 8.9, 
+          description: 'Sorvete com calda de chocolate', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 3,
+          is_featured: true,
+          is_promotion: false 
+        }
+      ];
+
+      // Lista de produtos em promoção
+      const promotionProducts = [
+        { 
+          id: 2, 
+          name: 'Coca-Cola', 
+          price: 6.5, 
+          description: 'Refrigerante 350ml', 
+          imageUrl: 'https://via.placeholder.com/200',
+          categoryId: 2,
+          is_featured: false,
+          is_promotion: true
+        }
+      ];
+
+      // Ofertas ativas
+      const activeOffers = [
+        {
+          id: 1,
+          title: 'Combo Econômico',
+          description: 'Hambúrguer + Batata + Refrigerante',
+          price: 25.9,
+          original_price: 32.5,
+          imageUrl: 'https://via.placeholder.com/200',
+          active: true,
+          created_at: new Date().toISOString()
+        }
+      ];
       
       // Cria um objeto de consulta (query builder)
       return {
@@ -103,8 +155,37 @@ if (IS_MOCK_MODE) {
             eq: (column, value) => {
               console.log(`[Mock Supabase] Filtro: ${table}.${column} = ${value}`);
               
-              // Para tabela de perfis, sempre retorna o perfil mockado
-              if (table === 'profiles') {
+              // Filtros específicos conhecidos
+              if (table === 'profiles' && column === 'user_id') {
+                return {
+                  single: () => mockResponse(mockProfile),
+                  data: [mockProfile],
+                  error: null
+                };
+              }
+              
+              if (table === 'products' && column === 'is_featured' && value === true) {
+                return {
+                  data: featuredProducts,
+                  error: null
+                };
+              }
+              
+              if (table === 'products' && column === 'is_promotion' && value === true) {
+                return {
+                  data: promotionProducts,
+                  error: null
+                };
+              }
+              
+              if (table === 'offers' && column === 'active' && value === true) {
+                return {
+                  data: activeOffers,
+                  error: null
+                };
+              }
+
+              if (column === 'id' && value === 'mock-user-123') {
                 return {
                   single: () => mockResponse(mockProfile),
                   data: [mockProfile],
@@ -114,9 +195,10 @@ if (IS_MOCK_MODE) {
               
               // Para outras tabelas, tenta filtrar
               try {
-                const filteredData = queryBuilder.data.filter(item => 
-                  item && typeof item === 'object' && column in item && item[column] === value
-                );
+                const filteredData = Array.isArray(queryBuilder.data) ? 
+                  queryBuilder.data.filter(item => 
+                    item && typeof item === 'object' && column in item && item[column] === value
+                  ) : [];
                 
                 return {
                   single: () => mockResponse(filteredData.length > 0 ? filteredData[0] : null),
@@ -134,7 +216,7 @@ if (IS_MOCK_MODE) {
             },
             
             // Método single para retornar um único item
-            single: () => mockResponse(queryBuilder.data.length > 0 ? queryBuilder.data[0] : null)
+            single: () => mockResponse(Array.isArray(queryBuilder.data) && queryBuilder.data.length > 0 ? queryBuilder.data[0] : null)
           };
           
           return queryBuilder;
@@ -200,7 +282,8 @@ function getMockData(table) {
           description: 'Delicioso hambúrguer com queijo', 
           imageUrl: 'https://via.placeholder.com/200',
           categoryId: 1,
-          featured: true 
+          is_featured: true,
+          is_promotion: false
         },
         { 
           id: 2, 
@@ -209,7 +292,8 @@ function getMockData(table) {
           description: 'Refrigerante 350ml', 
           imageUrl: 'https://via.placeholder.com/200',
           categoryId: 2,
-          featured: false 
+          is_featured: false,
+          is_promotion: true
         },
         { 
           id: 3, 
@@ -218,7 +302,21 @@ function getMockData(table) {
           description: 'Sorvete com calda de chocolate', 
           imageUrl: 'https://via.placeholder.com/200',
           categoryId: 3,
-          featured: true 
+          is_featured: true,
+          is_promotion: false
+        }
+      ];
+    case 'offers':
+      return [
+        {
+          id: 1,
+          title: 'Combo Econômico',
+          description: 'Hambúrguer + Batata + Refrigerante',
+          price: 25.9,
+          original_price: 32.5,
+          imageUrl: 'https://via.placeholder.com/200',
+          active: true,
+          created_at: new Date().toISOString()
         }
       ];
     default:
