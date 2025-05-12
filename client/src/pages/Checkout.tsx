@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/formatCurrency';
 import { AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useEffect, useState } from 'react';
 import { io } from "socket.io-client";
